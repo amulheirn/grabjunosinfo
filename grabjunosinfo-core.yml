@@ -1,0 +1,48 @@
+#  Ansible playbook to gather facts from Junos devices and put into 
+#  a csv file. 
+#  This has been modified to work with Ansible 2.3 or greater and
+#  the latest Junos PyEZ libraries available at April 2018
+#  Note that this uses the Ansible core modules for Junos rather 
+#  than the Juniper ones.
+#
+#  Andrew Mulheirn - Axians Networks
+
+---
+- name: Get info           # The name of the 'play'
+  hosts: all               # Run on all hosts in inventory file
+
+#  roles:
+#  - Juniper.junos         # Junos Ansible module not used here
+#                          # because we use the core module
+
+  connection: local        # Tells it to run locally
+  gather_facts: no
+
+
+  vars:
+  - USERNAME: axians
+  - DEVICE_PASSWORD: Axians
+
+  tasks:
+  # Check a netconf connection can be made on port 830
+    - name: Checking Netconf connection
+      wait_for: host={{ inventory_hostname }} port=830 timeout=5
+
+  # Retrieve the facts from the device using user/pass specified earlier 
+    - name: Get info from Junos device
+      junos_facts:
+#        host={{ inventory_hostname }}
+        config_format="xml"
+#        username={{ USERNAME }}
+#        password={{ DEVICE_PASSWORD }}
+
+  # Print results to screen, then write a CSV file
+    - name: Print model
+      debug: 
+        var=ansible_net_model
+    - name: Write details
+      lineinfile:
+        dest: ./logs/versionsandserials.txt
+        line: "{{ inventory_hostname }},{{ ansible_net_hostname }},{{ ansible_net_serialnum }},{{ ansible_net_model }},{{ ansible_net_version }}"
+        insertafter: EOF
+        create: True
